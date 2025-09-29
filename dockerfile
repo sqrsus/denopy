@@ -1,26 +1,18 @@
-# 构建阶段
-FROM denoland/deno:alpine-1.40.0 AS builder
+FROM denoland/deno:alpine-1.40.0
 
 WORKDIR /app
 
-COPY deps.ts .
-COPY deno.json deno.lock ./
-
-RUN deno cache deps.ts
-
+# 复制所有文件
 COPY . .
 
-# 编译成可执行文件
-RUN deno compile --allow-net --allow-read --output mstv main.ts
+# 检查并创建必要的文件
+RUN if [ ! -f "deno.json" ]; then \
+      echo '{"imports": {}}' > deno.json; \
+    fi
 
-# 运行时阶段
-FROM alpine:3.18
-
-WORKDIR /app
-
-# 复制可执行文件
-COPY --from=builder /app/mstv /app/mstv
+# 直接缓存main.ts（不依赖deno.lock）
+RUN deno cache main.ts
 
 EXPOSE 8000
 
-CMD ["./mstv"]
+CMD ["run", "--allow-net", "--allow-read", "main.ts"]
